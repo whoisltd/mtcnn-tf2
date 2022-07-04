@@ -1,5 +1,7 @@
 import tensorflow as tf
-from tensorflow.keras import Input, Model, layers
+from tensorflow.keras import Input
+from tensorflow.keras import layers
+from tensorflow.keras import Model
 
 
 def PNet(weights=None):
