@@ -1,9 +1,11 @@
 import tensorflow as tf
-from tensorflow.keras import Model, Input, layers
+from tensorflow.keras import Input
+from tensorflow.keras import layers
+from tensorflow.keras import Model
 
 
 def PNet(weights=None):
-    """ Proposal Network, receives an image and outputs
+    """Proposal Network, receives an image and outputs
     bbox offset regressions and confidence scores for each sliding
     window of 12x12
     """
@@ -39,7 +41,7 @@ def PNet(weights=None):
 
 
 def RNet(weights=None):
-    """ Refine Network, receives image crops from PNet and outputs
+    """Refine Network, receives image crops from PNet and outputs
     further offset refinements and confidence scores to filter out
     the predictions
     """
@@ -73,7 +75,7 @@ def RNet(weights=None):
 
 
 def ONet(weights=None):
-    """ Output Network, receives image crops from RNet and outputs
+    """Output Network, receives image crops from RNet and outputs
     final offset regressions, facial landmark positions and confidence scores
     """
     # img_in = Input(shape=(48, 48, 3))
@@ -108,6 +110,7 @@ def ONet(weights=None):
     #     model.load_weights(weights)
     model = tf.keras.models.load_model(weights)
     return model
+
 
 # # a = PNet()
 # # a.summary()
@@ -172,7 +175,7 @@ def ONet(weights=None):
 
 # def ONet(url):
 #     # if input_shape is None:
-#     # input_shape = 
+#     # input_shape =
 
 #     o_inp = Input(shape=(48, 48, 3))
 #     o_layer = Conv2D(32, kernel_size=(3, 3), strides=(1, 1), padding="valid")(o_inp)
