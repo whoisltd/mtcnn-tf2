@@ -1,9 +1,10 @@
 import tensorflow as tf
 from .nets import PNet, RNet, ONet
 from .box_utils import calibrate_box, convert_to_square, get_image_boxes, generate_bboxes, preprocess
+import requests
+tf.config.experimental_run_functions_eagerly(True)
 
-
-DEF_THRESHOLDS = [0.7, 0.8, 0.9]
+DEF_THRESHOLDS = [0.6, 0.8, 0.9]
 DEF_NMS_THRESHOLDS = [0.6, 0.6, 0.6]
 
 
@@ -72,6 +73,7 @@ class MTCNN(object):
         # minimum face size that we want to detect
         m = min_detection_size / self.min_face_size
         min_length *= m
+        # print('this is min length', min_length)
         factor_count = 0
         while min_length > min_detection_size:
             scales.append(m * factor**factor_count)
@@ -79,6 +81,7 @@ class MTCNN(object):
             factor_count += 1
 
         self.scale_cache[min_length] = scales
+        # print('this is scalse', scales)
         return scales
 
     @tf.function(
@@ -103,12 +106,19 @@ class MTCNN(object):
         img_in = tf.image.resize(img, (hs, ws))
         img_in = preprocess(img_in)
         img_in = tf.expand_dims(img_in, 0)
+        img_in = tf.make_tensor_proto(img_in)
+        img_in = tf.make_ndarray(img_in)
 
-        probs, offsets = self.pnet(img_in)
-        boxes = generate_bboxes(probs[0], offsets[0], scale, self.thresholds[0])
+        payload = {'instances': img_in.tolist()}
+        res = requests.post('http://localhost:8501/v1/models/p_net:predict', json=payload)
+        res = res.json()['predictions'][0]
+        probs = tf.convert_to_tensor(res['conv2d_12'])
+        offsets = tf.convert_to_tensor(res['softmax_2'])
+        boxes = generate_bboxes(probs, offsets, scale, self.thresholds[0])
+        # print('this boxes', boxes.shape)
         if len(boxes) == 0:
             return boxes
-        keep = tf.image.non_max_suppression(boxes[:, 0:4], boxes[:, 4], self.max_output_size,
+        keep = tf.image.non_max_suppression(boxes[:, :4], boxes[:, 4], self.max_output_size,
                                             iou_threshold=0.5)
 
         boxes = tf.gather(boxes, keep)
@@ -126,6 +136,7 @@ class MTCNN(object):
             float tensor of shape [n, 4]
         """
         bboxes, scores, offsets = boxes[:, :4], boxes[:, 4], boxes[:, 5:]
+        # print('this shape', bboxes.shape, offsets.shape)
         # use offsets predicted by pnet to transform bounding boxes
         bboxes = calibrate_box(bboxes, offsets)
         bboxes = convert_to_square(bboxes)
@@ -178,11 +189,13 @@ class MTCNN(object):
         """
         img_boxes = get_image_boxes(bboxes, img, height, width, num_boxes, size=24)
         probs, offsets = self.rnet(img_boxes)
-
+        # print('hmmm', tf.where(probs[:, 1] > self.thresholds[1]))
         keep = tf.where(probs[:, 1] > self.thresholds[1])[:, 0]
+
         bboxes = tf.gather(bboxes, keep)
         offsets = tf.gather(offsets, keep)
         scores = tf.gather(probs[:, 1], keep)
+        # tf.print('boxs', bboxes)
 
         bboxes = calibrate_box(bboxes, offsets)
         bboxes = convert_to_square(bboxes)
@@ -216,8 +229,10 @@ class MTCNN(object):
         """
         img_boxes = get_image_boxes(bboxes, img, height, width, num_boxes, size=48)
         probs, offsets, landmarks = self.onet(img_boxes)
-
+        # tf.print('boxes', bboxes)
         keep = tf.where(probs[:, 1] > self.thresholds[2])[:, 0]
+        # tf.print('this is keep', probs[:,1])
+        # tf.print('this is keep', self.thresholds[2])
         bboxes = tf.gather(bboxes, keep)
         offsets = tf.gather(offsets, keep)
         scores = tf.gather(probs[:, 1], keep)

@@ -12,7 +12,7 @@ def convert_to_square(bboxes):
         float tensor of shape [n, 4]
     """
     x1, y1, x2, y2 = [bboxes[:, i] for i in range(4)]
-    print(x1, y1, x2, y2)
+    # print(x1, y1, x2, y2)
     h = y2 - y1
     w = x2 - x1
     max_side = tf.maximum(h, w)
@@ -70,7 +70,7 @@ def get_image_boxes(bboxes, img, height, width, num_boxes, size=24):
                                          tf.zeros(num_boxes, dtype=tf.int32),
                                          (size, size))
     img_boxes = preprocess(img_boxes)
-    print(img_boxes.shape)
+    # print(img_boxes.shape)
     return img_boxes
 
 
@@ -97,9 +97,9 @@ def generate_bboxes(probs, offsets, scale, threshold):
     # inds: N x 2
     inds = tf.where(probs > threshold)
     if inds.shape[0] == 0:
-        return tf.zeros((0, 9))
+        return []
 
-    print('this is offsets:',offsets)
+    # print('this is offsets:',offsets)
     # offsets: N x 4
     offsets = tf.gather_nd(offsets, inds)
     # score: N x 1
@@ -108,8 +108,10 @@ def generate_bboxes(probs, offsets, scale, threshold):
     # P-Net is applied to scaled images
     # so we need to rescale bounding boxes back
     inds = tf.cast(inds, tf.float32)
-    print('this is inds:',inds)
+
     # bounding_boxes: N x 9
+    # print('this shape:', tf.expand_dims(tf.math.round((stride * inds[:, 1]) / scale), 1).shape)
+    # print('this shapepe:', score.shape, offsets.shape)
     bounding_boxes = tf.concat([
         tf.expand_dims(tf.math.round((stride * inds[:, 1]) / scale), 1),
         tf.expand_dims(tf.math.round((stride * inds[:, 0]) / scale), 1),
@@ -117,6 +119,7 @@ def generate_bboxes(probs, offsets, scale, threshold):
         tf.expand_dims(tf.math.round((stride * inds[:, 0] + cell_size) / scale), 1),
         score, offsets
     ], 1)
+    # print(bounding_boxes.shape)
     return bounding_boxes
 
 
@@ -139,7 +142,8 @@ if __name__ == '__main__':
     # tf.constant([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]])))
 
     #test get_image_boxes
-    # boxes = tf.constant([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]])
+    boxes = tf.constant([[0.1, 0.2, 0.3, 0.4, 0.3], [0.5, 0.6, 0.7, 0.8,0.4]])
+    print(boxes[:, :4])
     # img = tf.ones((100, 100, 3))
     # height = 100
     # width = 100
@@ -148,30 +152,26 @@ if __name__ == '__main__':
     # get_image_boxes(boxes, img, height, width, num_boxes, size)
 
     # test generate_bboxes
-    # probs = tf.constant([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]])
+    # probs = tf.constant([[0.1, 0.2, 0.3, 0.4, 1], [0.5, 0.6, 0.7, 0.8, 2], [1,2,3,4, 3], [5,6,7,8, 4]])
+    # print(probs[:,1])
     # offsets = tf.constant([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]])
     # scale = 1.0
     # threshold = 0.5
     # generate_bboxes(probs, offsets, scale, threshold)
 
     #probs shape [p, m, 2]
-    probs = tf.constant([[[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]], [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]], [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]], [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]]])
-    # print(probs)
+    # probs = tf.constant([[[0.1, 0.2 ,1, 2], [0.5, 0.6,2, 3], [0.7, 0.8,3, 4], [0.1, 0.2 ,1, 2]], [[0.1, 0.2 ,1, 5], [0.5, 0.6,2, 6], [0.7, 0.8,3, 7], [0.1, 0.2 ,1, 2]], [[0.1, 0.2,4, 8], [0.5, 0.6,5, 9], [0.7, 0.8,6, 1], [0.1, 0.2 ,1, 2]], [[0.1, 0.2,7,2], [0.5, 0.6,8,3], [0.7, 0.8,9,4], [0.1, 0.2 ,1, 2]], [[0.1, 0.2,10,5], [0.5, 0.6,11,6], [0.7, 0.8,12,7], [0.1, 0.2 ,1, 2]]])
+    # probs = tf.constant([[1,2,3,4, 5,6,7,8,9],[5,6,7,8, 9,1,2,3,4]])
+    # print(probs[:, :4], probs[:,5:])
     # probs = probs[:, :, 1]
+    # import numpy as np
+    # print(np.array((1,2,3)))
+    # print(probs)
     #offsets shape [p, m, 4]
-    offsets = tf.constant([[[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]])
+    # offsets = tf.constant([[[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]])
     # scale = 1.0
     # threshold = 0.5
     # generate_bboxes(probs, offsets, scale, threshold)
-    inds = tf.where(probs > 0.5)
-    print(inds)
-    print(inds[:,1])
-    print(inds[:,0])
-    print(inds[:,2])
-    # # inds = tf.zeros((0, 9))
-    # print(inds)
-    # print(inds[:, 1])
-    # tf.gather_nd(offsets, inds)
-
-
     
+    #matrix [1, 49, 79, 2]
+    #     
