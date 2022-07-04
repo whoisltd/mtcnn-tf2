@@ -69,9 +69,9 @@ def get_image_boxes(bboxes, img, height, width, num_boxes, size=24):
     x2 = tf.math.minimum(bboxes[:, 2], width) / width
     y2 = tf.math.minimum(bboxes[:, 3], height) / height
     boxes = tf.stack([y1, x1, y2, x2], 1)
-    img_boxes = tf.image.crop_and_resize(
-        tf.expand_dims(img, 0), boxes, tf.zeros(num_boxes, dtype=tf.int32), (size, size)
-    )
+    img_boxes = tf.image.crop_and_resize(tf.expand_dims(img, 0), boxes,
+                                         tf.zeros(num_boxes, dtype=tf.int32),
+                                         (size, size))
     img_boxes = preprocess(img_boxes)
     print(img_boxes.shape)
     return img_boxes
@@ -117,8 +117,10 @@ def generate_bboxes(probs, offsets, scale, threshold):
         [
             tf.expand_dims(tf.math.round((stride * inds[:, 1]) / scale), 1),
             tf.expand_dims(tf.math.round((stride * inds[:, 0]) / scale), 1),
-            tf.expand_dims(tf.math.round((stride * inds[:, 1] + cell_size) / scale), 1),
-            tf.expand_dims(tf.math.round((stride * inds[:, 0] + cell_size) / scale), 1),
+            tf.expand_dims(
+                tf.math.round((stride * inds[:, 1] + cell_size) / scale), 1),
+            tf.expand_dims(
+                tf.math.round((stride * inds[:, 0] + cell_size) / scale), 1),
             score,
             offsets,
         ],
@@ -163,23 +165,19 @@ if __name__ == "__main__":
     # generate_bboxes(probs, offsets, scale, threshold)
 
     # probs shape [p, m, 2]
-    probs = tf.constant(
-        [
-            [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]],
-            [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]],
-            [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]],
-            [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]],
-        ]
-    )
+    probs = tf.constant([
+        [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]],
+        [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]],
+        [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]],
+        [[0.1, 0.2], [0.5, 0.6], [0.7, 0.8]],
+    ])
     # print(probs)
     # probs = probs[:, :, 1]
     # offsets shape [p, m, 4]
-    offsets = tf.constant(
-        [
-            [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]],
-            [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]],
-        ]
-    )
+    offsets = tf.constant([
+        [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]],
+        [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]],
+    ])
     # scale = 1.0
     # threshold = 0.5
     # generate_bboxes(probs, offsets, scale, threshold)
