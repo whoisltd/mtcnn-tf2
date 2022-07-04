@@ -1,5 +1,5 @@
-from sklearn.preprocessing import scale
 import tensorflow as tf
+from sklearn.preprocessing import scale
 
 
 def convert_to_square(bboxes):
@@ -20,12 +20,15 @@ def convert_to_square(bboxes):
     dy1 = y1 + h * 0.5 - max_side * 0.5
     dx2 = dx1 + max_side
     dy2 = dy1 + max_side
-    return tf.stack([
-        tf.math.round(dx1),
-        tf.math.round(dy1),
-        tf.math.round(dx2),
-        tf.math.round(dy2),
-    ], 1)
+    return tf.stack(
+        [
+            tf.math.round(dx1),
+            tf.math.round(dy1),
+            tf.math.round(dx2),
+            tf.math.round(dy2),
+        ],
+        1,
+    )
 
 
 def calibrate_box(bboxes, offsets):
@@ -99,7 +102,6 @@ def generate_bboxes(probs, offsets, scale, threshold):
     if inds.shape[0] == 0:
         return []
 
-    # print('this is offsets:',offsets)
     # offsets: N x 4
     offsets = tf.gather_nd(offsets, inds)
     # score: N x 1
@@ -108,18 +110,20 @@ def generate_bboxes(probs, offsets, scale, threshold):
     # P-Net is applied to scaled images
     # so we need to rescale bounding boxes back
     inds = tf.cast(inds, tf.float32)
-
     # bounding_boxes: N x 9
-    # print('this shape:', tf.expand_dims(tf.math.round((stride * inds[:, 1]) / scale), 1).shape)
-    # print('this shapepe:', score.shape, offsets.shape)
-    bounding_boxes = tf.concat([
-        tf.expand_dims(tf.math.round((stride * inds[:, 1]) / scale), 1),
-        tf.expand_dims(tf.math.round((stride * inds[:, 0]) / scale), 1),
-        tf.expand_dims(tf.math.round((stride * inds[:, 1] + cell_size) / scale), 1),
-        tf.expand_dims(tf.math.round((stride * inds[:, 0] + cell_size) / scale), 1),
-        score, offsets
-    ], 1)
-    # print(bounding_boxes.shape)
+    bounding_boxes = tf.concat(
+        [
+            tf.expand_dims(tf.math.round((stride * inds[:, 1]) / scale), 1),
+            tf.expand_dims(tf.math.round((stride * inds[:, 0]) / scale), 1),
+            tf.expand_dims(
+                tf.math.round((stride * inds[:, 1] + cell_size) / scale), 1),
+            tf.expand_dims(
+                tf.math.round((stride * inds[:, 0] + cell_size) / scale), 1),
+            score,
+            offsets,
+        ],
+        1,
+    )
     return bounding_boxes
 
 
@@ -134,44 +138,3 @@ def preprocess(img):
     """
     img = (img - 127.5) * 0.0078125
     return img
-
-if __name__ == '__main__':
-    # print(convert_to_square(tf.constant([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]])))
-
-    # print(calibrate_box(tf.constant([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]), 
-    # tf.constant([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]])))
-
-    #test get_image_boxes
-    boxes = tf.constant([[0.1, 0.2, 0.3, 0.4, 0.3], [0.5, 0.6, 0.7, 0.8,0.4]])
-    print(boxes[:, :4])
-    # img = tf.ones((100, 100, 3))
-    # height = 100
-    # width = 100
-    # num_boxes = 2
-    # size = 24
-    # get_image_boxes(boxes, img, height, width, num_boxes, size)
-
-    # test generate_bboxes
-    # probs = tf.constant([[0.1, 0.2, 0.3, 0.4, 1], [0.5, 0.6, 0.7, 0.8, 2], [1,2,3,4, 3], [5,6,7,8, 4]])
-    # print(probs[:,1])
-    # offsets = tf.constant([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]])
-    # scale = 1.0
-    # threshold = 0.5
-    # generate_bboxes(probs, offsets, scale, threshold)
-
-    #probs shape [p, m, 2]
-    # probs = tf.constant([[[0.1, 0.2 ,1, 2], [0.5, 0.6,2, 3], [0.7, 0.8,3, 4], [0.1, 0.2 ,1, 2]], [[0.1, 0.2 ,1, 5], [0.5, 0.6,2, 6], [0.7, 0.8,3, 7], [0.1, 0.2 ,1, 2]], [[0.1, 0.2,4, 8], [0.5, 0.6,5, 9], [0.7, 0.8,6, 1], [0.1, 0.2 ,1, 2]], [[0.1, 0.2,7,2], [0.5, 0.6,8,3], [0.7, 0.8,9,4], [0.1, 0.2 ,1, 2]], [[0.1, 0.2,10,5], [0.5, 0.6,11,6], [0.7, 0.8,12,7], [0.1, 0.2 ,1, 2]]])
-    # probs = tf.constant([[1,2,3,4, 5,6,7,8,9],[5,6,7,8, 9,1,2,3,4]])
-    # print(probs[:, :4], probs[:,5:])
-    # probs = probs[:, :, 1]
-    # import numpy as np
-    # print(np.array((1,2,3)))
-    # print(probs)
-    #offsets shape [p, m, 4]
-    # offsets = tf.constant([[[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]])
-    # scale = 1.0
-    # threshold = 0.5
-    # generate_bboxes(probs, offsets, scale, threshold)
-    
-    #matrix [1, 49, 79, 2]
-    #     
