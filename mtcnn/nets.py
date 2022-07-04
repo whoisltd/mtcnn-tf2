@@ -172,7 +172,7 @@ def ONet(weights=None):
 
 # def ONet(url):
 #     # if input_shape is None:
-#     # input_shape = 
+#     # input_shape =
 
 #     o_inp = Input(shape=(48, 48, 3))
 #     o_layer = Conv2D(32, kernel_size=(3, 3), strides=(1, 1), padding="valid")(o_inp)
