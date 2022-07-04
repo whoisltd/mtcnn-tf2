@@ -1,5 +1,5 @@
-from sklearn.preprocessing import scale
 import tensorflow as tf
+from sklearn.preprocessing import scale
 
 
 def convert_to_square(bboxes):
