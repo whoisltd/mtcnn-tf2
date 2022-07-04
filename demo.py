@@ -7,7 +7,7 @@ from mtcnn.mtcnn import MTCNN
 
 def image_demo(img_input, img_output):
     """ mtcnn image demo """
-    mtcnn = MTCNN('modelss (1)/pnet.h5', 'modelss/rnet.h5', 'modelss/onet.h5')
+    mtcnn = MTCNN('models/pnet.h5', 'models/rnet.h5', 'models/onet.h5')
 
     img = cv2.imread(img_input)
     # print('shape', img.shape)

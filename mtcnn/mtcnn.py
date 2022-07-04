@@ -1,8 +1,6 @@
 import tensorflow as tf
 from .nets import PNet, RNet, ONet
 from .box_utils import calibrate_box, convert_to_square, get_image_boxes, generate_bboxes, preprocess
-import requests
-tf.config.experimental_run_functions_eagerly(True)
 
 DEF_THRESHOLDS = [0.6, 0.8, 0.9]
 DEF_NMS_THRESHOLDS = [0.6, 0.6, 0.6]
@@ -106,15 +104,10 @@ class MTCNN(object):
         img_in = tf.image.resize(img, (hs, ws))
         img_in = preprocess(img_in)
         img_in = tf.expand_dims(img_in, 0)
-        img_in = tf.make_tensor_proto(img_in)
-        img_in = tf.make_ndarray(img_in)
+        
+        probs, offsets = self.pnet(img_in)
 
-        payload = {'instances': img_in.tolist()}
-        res = requests.post('http://localhost:8501/v1/models/p_net:predict', json=payload)
-        res = res.json()['predictions'][0]
-        probs = tf.convert_to_tensor(res['conv2d_12'])
-        offsets = tf.convert_to_tensor(res['softmax_2'])
-        boxes = generate_bboxes(probs, offsets, scale, self.thresholds[0])
+        boxes = generate_bboxes(probs[0], offsets[0], scale, self.thresholds[0])
         # print('this boxes', boxes.shape)
         if len(boxes) == 0:
             return boxes
