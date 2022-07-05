@@ -1,6 +1,8 @@
+import requests
 import tensorflow as tf
 from .nets import PNet, RNet, ONet
 from .box_utils import calibrate_box, convert_to_square, get_image_boxes, generate_bboxes, preprocess
+tf.config.experimental_run_functions_eagerly(True)
 
 DEF_THRESHOLDS = [0.6, 0.8, 0.9]
 DEF_NMS_THRESHOLDS = [0.6, 0.6, 0.6]
@@ -104,10 +106,16 @@ class MTCNN(object):
         img_in = tf.image.resize(img, (hs, ws))
         img_in = preprocess(img_in)
         img_in = tf.expand_dims(img_in, 0)
-        
-        probs, offsets = self.pnet(img_in)
-
-        boxes = generate_bboxes(probs[0], offsets[0], scale, self.thresholds[0])
+        img_in = tf.make_tensor_proto(img_in)
+        img_in = tf.make_ndarray(img_in)
+        # print(img_in.shape)
+        payload = {'instances': img_in.tolist()}
+        res = requests.post('http://localhost:8501/v1/models/p_net:predict', json=payload)
+        res = res.json()['predictions'][0]
+        probs = tf.convert_to_tensor(res['softmax_2'])
+        offsets = tf.convert_to_tensor(res['conv2d_12'])
+        # print(probs.shape)
+        boxes = generate_bboxes(probs, offsets, scale, self.thresholds[0])
         # print('this boxes', boxes.shape)
         if len(boxes) == 0:
             return boxes
@@ -181,7 +189,25 @@ class MTCNN(object):
             float tensor of shape [n, 4], predicted bounding boxes
         """
         img_boxes = get_image_boxes(bboxes, img, height, width, num_boxes, size=24)
-        probs, offsets = self.rnet(img_boxes)
+        img_in = tf.make_tensor_proto(img_boxes)
+        img_in = tf.make_ndarray(img_in)
+        print(img_in.shape) # (145, 24, 24, 3)
+
+        # probs, offsets = self.rnet(img_boxes)
+        payload = {'instances': img_in.tolist()}
+        res = requests.post('http://localhost:8501/v1/models/r_net:predict', json=payload)
+        # print(len(res.json()['predictions']))
+        res = res.json()['predictions']
+        probs = []
+        offsets = []
+        for i in range(len(res)):
+            probs.append(res[i]['softmax'])
+            offsets.append(res[i]['dense5_2'])
+
+        probs = tf.convert_to_tensor(probs)
+        offsets = tf.convert_to_tensor(offsets)
+        print(probs.shape) # (, 4)
+
         # print('hmmm', tf.where(probs[:, 1] > self.thresholds[1]))
         keep = tf.where(probs[:, 1] > self.thresholds[1])[:, 0]
 
@@ -221,7 +247,27 @@ class MTCNN(object):
             scores: float tensor of shape [n], confidence scores
         """
         img_boxes = get_image_boxes(bboxes, img, height, width, num_boxes, size=48)
-        probs, offsets, landmarks = self.onet(img_boxes)
+        img_boxes = tf.make_tensor_proto(img_boxes)
+        img_boxes = tf.make_ndarray(img_boxes)
+        print(img_boxes.shape) # (145, 24, 24, 3)
+
+        # probs, offsets = self.rnet(img_boxes)
+        payload = {'instances': img_boxes.tolist()}
+        res = requests.post('http://localhost:8501/v1/models/o_net:predict', json=payload)
+        # print(res.json())
+        res = res.json()['predictions']
+        # print(res.keys())
+        probs = []
+        offsets = []
+        landmarks = []
+        for i in range(len(res)):
+            probs.append(res[i]['softmax_1'])
+            offsets.append(res[i]['dense6_2'])
+            landmarks.append(res[i]['dense6_3'])
+        probs = tf.convert_to_tensor(probs)
+        offsets = tf.convert_to_tensor(offsets)
+        landmarks = tf.convert_to_tensor(landmarks)
+        # probs, offsets, landmarks = self.onet(img_boxes)
         # tf.print('boxes', bboxes)
         keep = tf.where(probs[:, 1] > self.thresholds[2])[:, 0]
         # tf.print('this is keep', probs[:,1])
