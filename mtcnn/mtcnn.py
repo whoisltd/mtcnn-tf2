@@ -110,7 +110,7 @@ class MTCNN(object):
         img_in = tf.make_ndarray(img_in)
         # print(img_in.shape)
         payload = {'instances': img_in.tolist()}
-        res = requests.post('http://localhost:8501/v1/models/p_net:predict', json=payload)
+        res = requests.post('http://localhost:8501/v1/models/p_net/versions/2:predict', json=payload)
         res = res.json()['predictions'][0]
         probs = tf.convert_to_tensor(res['softmax_2'])
         offsets = tf.convert_to_tensor(res['conv2d_12'])
@@ -164,6 +164,8 @@ class MTCNN(object):
         for s in scales:
             boxes.append(self.stage_one_scale(img, height, width, s))
         # collect boxes (and offsets, and scores) from different scales
+        print(boxes[0].shape)
+        print(len(boxes))
         boxes = tf.concat(boxes, 0)
         if boxes.shape[0] == 0:
             return []
@@ -239,7 +241,7 @@ class MTCNN(object):
             height: image height, float
             width: image width, float
             num_boxes: number of rows in bboxes, int
-
+    
         Returns:
             bboxes: float tensor of shape [n, 4], face bounding boxes
             landmarks: float tensor of shape [n, 10], 5 facial landmarks,
